@@ -4,7 +4,20 @@ from models import Product  # Your Pydantic model
 from database import sessionLocal, engine, get_db
 import database_models  # Your SQLAlchemy models
 
+from fastapi.middleware.cors import CORSMiddleware
+
 app = FastAPI()
+
+#permission deh raha:: CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],   # Allows the browser to send GET, POST, OPTIONS, etc.
+    allow_headers=["*"],   # Allows headers like Content-Type, Authorization, etc.
+)
+
+
 
 # 1. Automatically build tables when app starts
 database_models.Base.metadata.create_all(bind=engine)
@@ -47,23 +60,23 @@ def get_all_products(db: Session = Depends(get_db)):
 
 
 # READ ONE FROM DATABASE
-@app.get("/product/{id}")
+@app.get("/products/{id}")
 def get_product_by_id(id: int, db: Session = Depends(get_db)):
     product = db.query(database_models.Product).filter(database_models.Product.id == id).first()
-    if not product:
+    if not products:
         raise HTTPException(status_code=404, detail="Product not found!")
-    return product
+    return products
 
 
 # CREATE (WRITE TO DATABASE)
-@app.post("/product", status_code=status.HTTP_201_CREATED)
-def add_product(product: Product, db: Session = Depends(get_db)):
+@app.post("/products", status_code=status.HTTP_201_CREATED)
+def add_product(products: Product, db: Session = Depends(get_db)):
     # Check if ID already exists to prevent unique constraint crashes
-    exists = db.query(database_models.Product).filter_by(id=product.id).first()
+    exists = db.query(database_models.Product).filter_by(id=products.id).first()
     if exists:
         raise HTTPException(status_code=400, detail="Product ID already exists!")
         
-    db_product = database_models.Product(**product.model_dump())
+    db_product = database_models.Product(**products.model_dump())
     db.add(db_product)
     db.commit()
     db.refresh(db_product)
@@ -71,7 +84,7 @@ def add_product(product: Product, db: Session = Depends(get_db)):
 
 
 # UPDATE IN DATABASE
-@app.put("/product/{id}")
+@app.put("/products/{id}")
 def update_the_product(id: int, updated_data: Product, db: Session = Depends(get_db)):
     db_product = db.query(database_models.Product).filter(database_models.Product.id == id).first()
     if not db_product:
@@ -89,7 +102,7 @@ def update_the_product(id: int, updated_data: Product, db: Session = Depends(get
 
 
 # DELETE FROM DATABASE
-@app.delete("/product/{id}")
+@app.delete("/products/{id}")
 def delete_product(id: int, db: Session = Depends(get_db)):
     db_product = db.query(database_models.Product).filter(database_models.Product.id == id).first()
     if not db_product:
